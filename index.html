@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101827">
+  <meta name="description" content="バドミントン向けアイソメトリックトレーニング用タイマー">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="バドミントンTimer">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-180.png">
+  <title>バドミントン向けアイソメトリックタイマー</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101827;
+      --panel: #1a2638;
+      --panel-2: #223149;
+      --text: #f4f7fb;
+      --muted: #aab6c8;
+      --accent: #7dd3fc;
+      --work: #86efac;
+      --rest: #fcd34d;
+      --line: #34445d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: max(24px, env(safe-area-inset-top)) 14px max(36px, env(safe-area-inset-bottom));
+      background: radial-gradient(ellipse at top, #1e3049 0%, var(--bg) 58%);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main { width: min(100%, 560px); margin: 0 auto; }
+    h1 { margin: 0 0 6px; font-size: clamp(1.35rem, 5vw, 1.8rem); letter-spacing: .02em; }
+    .sub { color: var(--muted); margin: 0 0 20px; font-size: .92rem; }
+    .panel {
+      background: rgba(26, 38, 56, .94);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 20px;
+      box-shadow: 0 16px 40px rgba(0,0,0,.22);
+    }
+    .status-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .pill { padding: 6px 11px; border-radius: 999px; font-size: .78rem; font-weight: 800; letter-spacing: .06em; background: var(--panel-2); color: var(--accent); }
+    .pill.work { color: var(--work); }
+    .pill.rest { color: var(--rest); }
+    #roundLabel { color: var(--muted); font-weight: 650; font-size: .9rem; }
+    #exerciseName { margin: 24px 0 4px; text-align:center; font-size: clamp(1.3rem, 6vw, 2rem); font-weight: 800; }
+    #instruction { min-height: 2.8em; text-align:center; color:var(--muted); font-size:.9rem; line-height:1.55; }
+    #time { margin: 12px 0 18px; text-align:center; font-size: clamp(4.6rem, 22vw, 7rem); line-height:1; font-weight:850; font-variant-numeric:tabular-nums; letter-spacing:-.06em; }
+    .track { width:100%; height:10px; border-radius:99px; background:#0c1421; overflow:hidden; }
+    #progress { width:0%; height:100%; background:var(--work); border-radius:99px; transition:width .2s linear, background .2s; }
+    .controls { display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:9px; margin-top:18px; }
+    button { border:0; border-radius:13px; padding:13px 10px; font:inherit; font-weight:800; cursor:pointer; color:var(--text); background:var(--panel-2); }
+    button:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+    button.primary { color:#082032; background:var(--accent); }
+    button:active { transform:translateY(1px); }
+    .next-line { text-align:center; color:var(--muted); margin:14px 0 0; font-size:.82rem; }
+    .section-title { margin:22px 2px 10px; font-size:1rem; }
+    .exercise-list { display:grid; gap:8px; }
+    .exercise {
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:12px 14px; background:rgba(26,38,56,.8); border:1px solid var(--line); border-radius:13px;
+    }
+    .exercise.active { border-color:var(--accent); background:#22344b; }
+    .exercise.done { opacity:.55; }
+    .exercise-name { font-weight:700; }
+    .exercise-time { flex:none; color:var(--muted); font-variant-numeric:tabular-nums; font-size:.9rem; }
+    details { margin-top:18px; padding:14px; border:1px solid var(--line); border-radius:14px; background:rgba(26,38,56,.7); }
+    summary { cursor:pointer; font-weight:750; }
+    .settings { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; }
+    label { display:grid; gap:6px; color:var(--muted); font-size:.85rem; }
+    input { width:100%; min-width:0; padding:10px; color:var(--text); background:#0e1725; border:1px solid var(--line); border-radius:9px; font:inherit; }
+    .note { margin:16px 2px 0; color:var(--muted); font-size:.82rem; line-height:1.6; }
+    @media (max-width:380px) { .panel { padding:16px; } .controls { grid-template-columns:1fr 1fr; } .controls .primary { grid-column:1 / -1; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>バドミントン向けアイソメトリック</h1>
+  <p class="sub">月・水・金メニュー｜全2ラウンド</p>
+
+  <section class="panel" aria-live="polite">
+    <div class="status-row">
+      <span id="mode" class="pill work">WORK</span>
+      <span id="roundLabel">ROUND 1 / 2</span>
+    </div>
+    <div id="exerciseName">プッシュアップホールド</div>
+    <div id="instruction">姿勢を保ち、呼吸を止めずに行います。</div>
+    <div id="time">00:15</div>
+    <div class="track" aria-label="現在の種目の進行状況"><div id="progress"></div></div>
+    <div class="controls">
+      <button id="startPause" class="primary">スタート</button>
+      <button id="next">次へ</button>
+      <button id="reset">最初から</button>
+    </div>
+    <p id="nextLine" class="next-line">次：休憩 30秒</p>
+  </section>
+
+  <h2 class="section-title">メニュー</h2>
+  <div id="exerciseList" class="exercise-list"></div>
+
+  <details>
+    <summary>時間設定を変更する</summary>
+    <div class="settings">
+      <label>プッシュアップ（秒）<input id="pushupInput" type="number" min="1" max="600" value="15"></label>
+      <label>スプリットスクワット（左右・秒）<input id="splitInput" type="number" min="1" max="600" value="25"></label>
+      <label>左右切替の休憩（秒）<input id="switchInput" type="number" min="0" max="600" value="15"></label>
+      <label>ホロウボディ（秒）<input id="hollowInput" type="number" min="1" max="600" value="20"></label>
+      <label>タオルA（秒）<input id="towelAInput" type="number" min="1" max="600" value="20"></label>
+      <label>タオルB（秒）<input id="towelBInput" type="number" min="1" max="600" value="20"></label>
+      <label>通常休憩（秒）<input id="restInput" type="number" min="0" max="600" value="30"></label>
+      <label>ラウンド間休憩（秒）<input id="roundRestInput" type="number" min="0" max="600" value="60"></label>
+      <label>ラウンド数<input id="roundsInput" type="number" min="1" max="5" value="2"></label>
+    </div>
+    <button id="applySettings" style="width:100%; margin-top:14px;">設定を適用して最初から</button>
+  </details>
+
+  <p class="note">痛みが出た場合や強い疲労がある場合は中止・休憩してください。力を入れている間も呼吸を続けましょう。画面を閉じたり端末がスリープしたりすると、ブラウザによってはタイマーの更新が遅れることがあります。</p>
+</main>
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const defaults = { pushup:15, split:25, switchRest:15, hollow:20, towelA:20, towelB:20, rest:30, roundRest:60, rounds:2 };
+  let settings = {...defaults};
+  let steps = [];
+  let index = 0;
+  let remaining = 0;
+  let running = false;
+  let finished = false;
+  let deadline = 0;
+  let intervalId = null;
+
+  const format = (seconds) => {
+    const s = Math.max(0, Math.ceil(seconds));
+    return `${String(Math.floor(s / 60)).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
+  };
+
+  function makeSteps() {
+    const result = [];
+    for (let r = 1; r <= settings.rounds; r++) {
+      const add = (type, name, duration, instruction) => result.push({type, name, duration, instruction, round:r});
+      add('work', 'プッシュアップホールド', settings.pushup, '姿勢を保ち、呼吸を止めずに行います。');
+      add('rest', '休憩', settings.rest, '次の種目に備えて呼吸を整えます。');
+      add('work', 'スプリットスクワットホールド（左）', settings.split, '前後に足を開き、安定した姿勢を保ちます。');
+      add('rest', '左右の切替', settings.switchRest, '反対側の姿勢に移ります。');
+      add('work', 'スプリットスクワットホールド（右）', settings.split, '前後に足を開き、安定した姿勢を保ちます。');
+      add('rest', '休憩', settings.rest, '次の種目に備えて呼吸を整えます。');
+      add('work', 'ホロウボディホールド', settings.hollow, '腰が反りすぎない範囲で体幹を保ちます。');
+      add('rest', '休憩', settings.rest, '次の種目に備えて呼吸を整えます。');
+      add('work', 'タオルA', settings.towelA, '床に置いたタオルを上方向へ引き続けます。');
+      add('rest', '休憩', settings.rest, '次の種目に備えて呼吸を整えます。');
+      add('work', 'タオルB', settings.towelB, '足に掛けたタオルを腕で引き、脚を伸ばす力と拮抗させます。肩甲骨周りを意識します。');
+      if (r < settings.rounds) add('rest', 'ラウンド間休憩', settings.roundRest, '水分を取り、次のラウンドに備えます。');
+    }
+    return result;
+  }
+
+  function renderList() {
+    const list = $('exerciseList');
+    list.innerHTML = '';
+    const seen = new Set();
+    steps.forEach((step, i) => {
+      if (step.type !== 'work') return;
+      const key = `${step.round}-${step.name}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const el = document.createElement('div');
+      el.className = 'exercise';
+      el.dataset.step = String(i);
+      const name = document.createElement('span');
+      name.className = 'exercise-name';
+      name.textContent = `R${step.round}　${step.name}`;
+      const time = document.createElement('span');
+      time.className = 'exercise-time';
+      time.textContent = `${step.duration}秒`;
+      el.append(name, time);
+      list.append(el);
+    });
+  }
+
+  function update() {
+    if (finished) {
+      $('mode').textContent = 'DONE';
+      $('mode').className = 'pill';
+      $('roundLabel').textContent = 'COMPLETE';
+      $('exerciseName').textContent = 'トレーニング完了';
+      $('instruction').textContent = 'お疲れさまでした。呼吸を整えて終了です。';
+      $('time').textContent = '00:00';
+      $('progress').style.width = '100%';
+      $('progress').style.background = 'var(--accent)';
+      $('startPause').textContent = '完了';
+      $('startPause').disabled = true;
+      $('nextLine').textContent = 'すべてのメニューが終了しました。';
+      document.querySelectorAll('.exercise').forEach(el => el.classList.remove('active'));
+      return;
+    }
+    const step = steps[index];
+    if (!step) return;
+    $('mode').textContent = step.type === 'work' ? 'WORK' : 'REST';
+    $('mode').className = `pill ${step.type}`;
+    $('roundLabel').textContent = `ROUND ${step.round} / ${settings.rounds}`;
+    $('exerciseName').textContent = step.name;
+    $('instruction').textContent = step.instruction;
+    $('time').textContent = format(remaining);
+    const pct = step.duration > 0 ? 100 * (1 - remaining / step.duration) : 100;
+    $('progress').style.width = `${Math.max(0, Math.min(100, pct))}%`;
+    $('progress').style.background = step.type === 'work' ? 'var(--work)' : 'var(--rest)';
+    $('startPause').textContent = running ? '一時停止' : 'スタート';
+    $('startPause').disabled = false;
+    const next = steps[index + 1];
+    $('nextLine').textContent = next ? `次：${next.name} ${next.duration}秒` : 'これが最後のメニューです。';
+    document.querySelectorAll('.exercise').forEach(el => {
+      const stepIndex = Number(el.dataset.step);
+      el.classList.toggle('active', stepIndex === index);
+      el.classList.toggle('done', stepIndex < index);
+    });
+  }
+
+  function stopTicker() {
+    if (intervalId !== null) clearInterval(intervalId);
+    intervalId = null;
+  }
+  function tick() {
+    if (!running) return;
+    remaining = Math.max(0, (deadline - Date.now()) / 1000);
+    if (remaining <= 0) {
+      advance();
+      return;
+    }
+    update();
+  }
+  function start() {
+    if (finished || running) return;
+    if (steps.length === 0) return;
+    running = true;
+    deadline = Date.now() + remaining * 1000;
+    stopTicker();
+    intervalId = setInterval(tick, 200);
+    update();
+  }
+  function pause() {
+    if (!running) return;
+    remaining = Math.max(0, (deadline - Date.now()) / 1000);
+    running = false;
+    stopTicker();
+    update();
+  }
+  function advance() {
+    running = false;
+    stopTicker();
+    index++;
+    if (index >= steps.length) {
+      finished = true;
+      remaining = 0;
+    } else {
+      remaining = steps[index].duration;
+    }
+    update();
+  }
+  function reset() {
+    running = false;
+    finished = false;
+    stopTicker();
+    index = 0;
+    remaining = steps[0].duration;
+    update();
+  }
+  function readSettings() {
+    const ids = {pushup:'pushupInput', split:'splitInput', switchRest:'switchInput', hollow:'hollowInput', towelA:'towelAInput', towelB:'towelBInput', rest:'restInput', roundRest:'roundRestInput', rounds:'roundsInput'};
+    const values = {};
+    for (const [key, id] of Object.entries(ids)) {
+      const value = Number($(id).value);
+      const min = key === 'switchRest' || key === 'rest' || key === 'roundRest' ? 0 : 1;
+      const max = key === 'rounds' ? 5 : 600;
+      if (!Number.isInteger(value) || value < min || value > max) {
+        alert(`${$(id).previousElementSibling?.textContent || '設定値'}は${min}〜${max}の整数にしてください。`);
+        return null;
+      }
+      values[key] = value;
+    }
+    return values;
+  }
+
+  $('startPause').addEventListener('click', () => running ? pause() : start());
+  $('next').addEventListener('click', advance);
+  $('reset').addEventListener('click', reset);
+  $('applySettings').addEventListener('click', () => {
+    const values = readSettings();
+    if (!values) return;
+    settings = values;
+    steps = makeSteps();
+    renderList();
+    reset();
+  });
+
+  steps = makeSteps();
+  remaining = steps[0].duration;
+  renderList();
+  update();
+})();
+</script>
+<script>
+  // HTTPSで公開されたときにService Workerを登録し、オフライン利用に備えます。
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js', { scope: './' }).catch((error) => {
+        console.error('Service Worker registration failed:', error);
+      });
+    });
+  }
+</script>
+</body>
+</html>
